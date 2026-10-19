@@ -175,3 +175,76 @@ export async function tambahProduk(formData) {
   revalidatePath("/admin");
   redirect("/admin");
 }
+
+export async function ubahProduk(idOrFormData, maybeFormData) {
+  // Wajib periksa status login admin di server sebelum mengubah data
+  const { supabase } = await verifikasiAdmin();
+
+  let id;
+  let formData;
+
+  if (maybeFormData instanceof FormData) {
+    id = idOrFormData;
+    formData = maybeFormData;
+  } else {
+    formData = idOrFormData;
+    id = formData.get("id");
+  }
+
+  if (!id) {
+    redirect("/admin?error=" + encodeURIComponent("ID produk tidak ditemukan."));
+  }
+
+  const nama = formData.get("nama")?.toString().trim();
+  const hargaRaw = formData.get("harga")?.toString().trim();
+  const kategori = formData.get("kategori")?.toString().trim() || null;
+  const foto_url = formData.get("foto_url")?.toString().trim() || null;
+  const deskripsi = formData.get("deskripsi")?.toString().trim() || null;
+
+  if (!nama) {
+    redirect(
+      `/admin/produk/${id}/ubah?error=` +
+        encodeURIComponent("Nama produk wajib diisi.")
+    );
+  }
+
+  const harga = parseInt(hargaRaw, 10);
+  if (isNaN(harga) || harga < 0) {
+    redirect(
+      `/admin/produk/${id}/ubah?error=` +
+        encodeURIComponent("Harga harus berupa angka yang tidak negatif.")
+    );
+  }
+
+  let errorMessage = null;
+
+  try {
+    const { error } = await supabase
+      .from("produk")
+      .update({
+        nama,
+        harga,
+        kategori,
+        foto_url,
+        deskripsi,
+      })
+      .eq("id", id);
+
+    if (error) {
+      errorMessage = error.message;
+    }
+  } catch (err) {
+    errorMessage = "Terjadi kesalahan saat memperbarui produk.";
+  }
+
+  if (errorMessage) {
+    redirect(
+      `/admin/produk/${id}/ubah?error=` + encodeURIComponent(errorMessage)
+    );
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/produk/${id}`);
+  revalidatePath("/admin");
+  redirect("/admin");
+}
