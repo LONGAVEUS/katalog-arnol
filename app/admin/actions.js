@@ -248,3 +248,45 @@ export async function ubahProduk(idOrFormData, maybeFormData) {
   revalidatePath("/admin");
   redirect("/admin");
 }
+
+export async function hapusProduk(idOrFormData, maybeFormData) {
+  // Wajib periksa status login admin di server sebelum menghapus data
+  const { supabase } = await verifikasiAdmin();
+
+  let id;
+  if (maybeFormData instanceof FormData) {
+    id = idOrFormData;
+  } else if (idOrFormData instanceof FormData) {
+    id = idOrFormData.get("id");
+  } else {
+    id = idOrFormData;
+  }
+
+  if (!id) {
+    redirect("/admin?error=" + encodeURIComponent("ID produk tidak ditemukan."));
+  }
+
+  let errorMessage = null;
+
+  try {
+    const { error } = await supabase
+      .from("produk")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      errorMessage = error.message;
+    }
+  } catch (err) {
+    errorMessage = "Terjadi kesalahan saat menghapus produk.";
+  }
+
+  if (errorMessage) {
+    redirect("/admin?error=" + encodeURIComponent(errorMessage));
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/produk/${id}`);
+  revalidatePath("/admin");
+  redirect("/admin");
+}

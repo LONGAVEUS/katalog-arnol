@@ -3,9 +3,10 @@ import TabelProduk from "@/components/TabelProduk";
 import Tombol from "@/components/Tombol";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function HalamanAdmin() {
+export default async function HalamanAdmin({ searchParams }) {
+  const { error: queryError } = (await searchParams) || {};
   let daftarProduk = [];
-  let pesanError = null;
+  let pesanError = queryError || null;
 
   try {
     const supabase = createClient();
