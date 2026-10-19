@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createSessionClient } from "@/lib/supabase/server";
 
 export async function verifikasiAdmin() {
@@ -117,4 +118,60 @@ export async function gantiPassword(formData) {
     "/admin/password?sukses=" +
       encodeURIComponent("Password berhasil diganti.")
   );
+}
+
+export async function tambahProduk(formData) {
+  // Wajib periksa di server bahwa admin sudah login sebelum mengubah/menambah data
+  const { supabase } = await verifikasiAdmin();
+
+  const nama = formData.get("nama")?.toString().trim();
+  const hargaRaw = formData.get("harga")?.toString().trim();
+  const kategori = formData.get("kategori")?.toString().trim() || null;
+  const foto_url = formData.get("foto_url")?.toString().trim() || null;
+  const deskripsi = formData.get("deskripsi")?.toString().trim() || null;
+
+  if (!nama) {
+    redirect(
+      "/admin/produk/baru?error=" +
+        encodeURIComponent("Nama produk wajib diisi.")
+    );
+  }
+
+  const harga = parseInt(hargaRaw, 10);
+  if (isNaN(harga) || harga < 0) {
+    redirect(
+      "/admin/produk/baru?error=" +
+        encodeURIComponent("Harga harus berupa angka yang tidak negatif.")
+    );
+  }
+
+  let errorMessage = null;
+
+  try {
+    const { error } = await supabase.from("produk").insert([
+      {
+        nama,
+        harga,
+        kategori,
+        foto_url,
+        deskripsi,
+      },
+    ]);
+
+    if (error) {
+      errorMessage = error.message;
+    }
+  } catch (err) {
+    errorMessage = "Terjadi kesalahan saat menyimpan produk.";
+  }
+
+  if (errorMessage) {
+    redirect(
+      "/admin/produk/baru?error=" + encodeURIComponent(errorMessage)
+    );
+  }
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+  redirect("/admin");
 }
