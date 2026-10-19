@@ -3,6 +3,23 @@
 import { redirect } from "next/navigation";
 import { createSessionClient } from "@/lib/supabase/server";
 
+export async function verifikasiAdmin() {
+  const supabase = await createSessionClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    redirect(
+      "/admin/login?error=" +
+        encodeURIComponent("Silakan masuk terlebih dahulu.")
+    );
+  }
+
+  return { supabase, user };
+}
+
 export async function login(formData) {
   const email = formData.get("email");
   const password = formData.get("password");
@@ -75,18 +92,8 @@ export async function gantiPassword(formData) {
     );
   }
 
-  const supabase = await createSessionClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    redirect(
-      "/admin/login?error=" +
-        encodeURIComponent("Silakan masuk terlebih dahulu.")
-    );
-  }
+  // Wajib periksa di server bahwa admin sudah login sebelum mengubah data
+  const { supabase } = await verifikasiAdmin();
 
   let errorMessage = null;
 
